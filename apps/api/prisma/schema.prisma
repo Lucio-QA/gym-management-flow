@@ -4,5 +4,86 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
 }
+
+model User {
+  id            String          @id @default(uuid())
+  email         String          @unique
+  passwordHash  String          @map("password_hash")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  //Relaciones
+  gymsOwned     Gym[]           @relation("GymOwner")
+  memberships   GymMembership[] 
+
+  @@map("users")     
+}
+
+model Gym {
+  id          String          @id @default(uuid())
+  name        String
+  ownerId     String          @map("owner_id")
+  createdAt   DateTime        @default(now()) @map("created_at")
+
+  // Relaciones
+  owner       User            @relation("GymOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  memberships GymMembership[]
+  roles       Role[]
+
+  @@map("gyms")
+}
+
+model GymMembership {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  gymId     String   @map("gym_id")
+  roleId    String   @map("role_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relaciones
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gym       Gym      @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, gymId])
+  @@map("gym_memberships")
+}
+
+model Role {
+  id          String           @id @default(uuid())
+  name        String
+  gymId       String           @map("gymId")
+
+  // Relaciones
+  gym         Gym              @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  memberships GymMembership[]
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String           @id @default(uuid())
+  code        String           @unique
+  description String?
+
+  // Relaciones
+  roles       RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String     @map("role_id")
+  permissionId String     @map("permission_id")
+
+  // Relaciones
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
