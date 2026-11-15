@@ -1,8 +1,9 @@
-import 'dotenv/config';
-import { app } from './app.js';
+import "dotenv/config";
+import app from "./app.js";
 
-const PORT = Number(process.env.PORT ?? 3000);
+const PORT = process.env.PORT || 4000;
 
 app.listen(PORT, () => {
-  console.log(`API running on http://localhost:${PORT}`);
-});
+  console.log(`🚀 Servidor corriendo exitosamente en el puerto ${PORT}`);
+  console.log(`👉 Entorno: ${process.env.NODE_ENV || "development"}`);
+})
