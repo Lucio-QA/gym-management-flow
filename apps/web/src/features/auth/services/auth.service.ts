@@ -1,30 +1,24 @@
-import axios from "axios";
-
-interface LoginCredentials {
-    email: string;
-    password: string;
-}
-
-interface LoginResponse {
-    success: boolean;
-    message: string;
-    data: {
-        token: string;
-        user?: {
-            id: string;
-            email: string;
-        };
-    };
-}
+import { apiClient } from "../../../services/api.client.js";
+import type {
+    AuthResponse,
+    LoginCredentials,
+    RegisterCredentials,
+} from "../types/auth.types.js";
 
 export const authService = {
     login: async (credentials: LoginCredentials): Promise<string> => {
-        // Apuntamos al endpoint del backend
-        const response = await axios.post<LoginResponse>(
-            "http://localhost:3000/api/auth/login",
+        const { data } = await apiClient.post<AuthResponse>(
+            "/auth/login",
             credentials
         );
-
-        return response.data.data.token;
+        return data.data.token;
     },
-}
+
+    register: async (credentials: RegisterCredentials): Promise<string> => {
+        const { data } = await apiClient.post<AuthResponse>(
+            "/auth/register",
+            credentials
+        );
+        return data.data.token;
+    },
+};
