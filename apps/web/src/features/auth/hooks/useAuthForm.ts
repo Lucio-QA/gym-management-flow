@@ -1,46 +1,49 @@
-import { isAxiosError } from "axios";
-import { useState, type ChangeEvent, type SyntheticEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { authService } from "../services/auth.service";
+import type { LoginCredentials, RegisterCredentials } from "../types/auth.types";
 
-interface ApiErrorResponse {
-    message?: string;
+interface UseAuthFormProps {
+    mode: "login" | "register";
+    onSuccess?: () => void;
 }
 
-export function useAuthForm<T extends Record<string, string | undefined>>(
-    initialState: T,
-    onSubmitAction: (data: T) => Promise<string>
-) {
-    const navigate = useNavigate();
-    const [formData, setFormData] = useState<T>(initialState);
+export function useAuthForm({ mode, onSuccess }: UseAuthFormProps) {
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [name, setName] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState<boolean>(false);
 
-    // Usamos el evento genérico limpio compatible con React 19
-    const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        setFormData((prev) => ({
-            ...prev,
-            [name]: value,
-        }));
-    };
-
-    const handleSubmit = async (e: SyntheticEvent) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        setError(null);
         setIsLoading(true);
+        setError(null);
 
         try {
-            const token = await onSubmitAction(formData);
-            localStorage.setItem("gym_token", token);
-            navigate("/dashboard");
-        } catch (err: unknown) {
-            if (isAxiosError<ApiErrorResponse>(err)) {
-                setError(
-                    err.response?.data?.message ||
-                    "Error al procesar la solicitud. Intente nuevamente."
-                );
+            let token: string;
+
+            if (mode === "login") {
+                const credentials: LoginCredentials = { email, password };
+                token = await authService.login(credentials);
             } else {
-                setError("Ocurrió un error inesperado.");
+                const credentials: RegisterCredentials = { email, password, name: name.trim() ? name : undefined };
+                token = await authService.register(credentials);
+            }
+
+            // Guardar token en localStorage
+            localStorage.setItem("gym_token", token);
+
+            // Callback de éxito o redirección
+            if (onSuccess) {
+                onSuccess();
+            } else {
+                window.location.href = "/dashboard";
+            }
+        } catch (err: unknown) {
+            if (err instanceof Error) {
+                setError(err.message);
+            } else {
+                setError("Ocurrió un error inesperado durante la autenticación.");
             }
         } finally {
             setIsLoading(false);
@@ -48,10 +51,14 @@ export function useAuthForm<T extends Record<string, string | undefined>>(
     };
 
     return {
-        formData,
-        error,
+        email,
+        setEmail,
+        password,
+        setPassword,
+        name,
+        setName,
         isLoading,
-        handleChange,
+        error,
         handleSubmit,
     };
 }
